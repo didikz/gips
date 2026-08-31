@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 1 — Project skeleton &amp; HTTP server</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="layout">
+    <nav class="lesson-nav">
+      <strong>Lesson 1</strong>
+      <ul>
+        <li><a href="#mission">Mission tie-in</a></li>
+        <li><a href="#layout">Layout</a></li>
+        <li><a href="#server">HTTP server</a></li>
+        <li><a href="#quiz">Check yourself</a></li>
+        <li><a href="#tasks">Your turn</a></li>
+        <li><a href="../reference/docker-and-cicd.html">Docker &amp; CI/CD →</a></li>
+        <li><a href="../lessons/0002-config-and-graceful-shutdown.html">Lesson 2 →</a></li>
+        <li><a href="../reference/curriculum-roadmap.html">All lessons</a></li>
+      </ul>
+    </nav>
+    <main>
+      <h1>Project skeleton &amp; HTTP server</h1>
+      <p class="lesson-meta">~20 min · stdlib only · first runnable increment</p>
+
+      <div class="mission-callout" id="mission">
+        <strong>Mission:</strong> Ship a production-grade image processing service. Today: a health-checked HTTP server with idiomatic package layout — the foundation every later endpoint builds on.
+      </div>
+
+      <h2>What you already know vs. what changes</h2>
+      <p>In Go — especially while learning — <code>net/http</code> is enough. Effective Go argues for <em>clarity over cleverness</em>: small packages, explicit wiring, errors returned not thrown.</p>
+      <p>This lesson is the first step toward the full <a href="https://roadmap.sh/projects/image-processing-service">image processing spec</a> — built flat, no framework layers.</p>
+
+      <h2 id="layout">Package layout</h2>
+      <p>See the full reference: <a href="../reference/project-layout.html">project layout</a>.</p>
+      <pre><code>cmd/gips/main.go              → entry point (thin)
+internal/httpserver/server.go → mux + ListenAndServe
+internal/http/handler/health.go → GET /healthz
+internal/config/config.go     → PORT from env</code></pre>
+      <p><strong>Why <code>internal/</code>?</strong> Go enforces that other modules cannot import it. Your domain logic stays private; only <code>cmd/</code> is the public entry.</p>
+
+      <h2 id="server">The server pattern</h2>
+      <p>Three layers, each with one job:</p>
+      <ol>
+        <li><strong><code>config</code></strong> — read environment (defaults for local dev).</li>
+        <li><strong><code>handler</code></strong> — pure HTTP functions; no global state.</li>
+        <li><strong><code>server</code></strong> — register routes, own the <code>http.Server</code>.</li>
+      </ol>
+
+      <p>The health handler is deliberately boring — production services need a liveness probe:</p>
+      <pre><code>// internal/http/handler/health.go
+func Health(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(http.StatusOK)
+    io.WriteString(w, `{"status":"ok"}`)
+}</code></pre>
+
+      <p>Register it on a <code>ServeMux</code> (Go 1.22+ supports method-aware patterns):</p>
+      <pre><code>mux := http.NewServeMux()
+mux.HandleFunc("GET /healthz", handler.Health)</code></pre>
+
+      <h3>Effective Go reminders</h3>
+      <ul>
+        <li>Run <code>go fmt ./...</code> — formatting is not negotiable.</li>
+        <li>Exported names start uppercase (<code>Health</code>); package-local names stay lowercase.</li>
+        <li>Doc comments on exported symbols: <code>// Health reports service liveness.</code></li>
+      </ul>
+
+      <h2 id="quiz">Check yourself</h2>
+
+      <div class="quiz" data-correct="1"
+           data-feedback-ok="Right — internal/ is compiler-enforced, not convention."
+           data-feedback-err="Not internal/models — Go uses internal/ as a special directory name.">
+        <div class="quiz-question">Where does private application code live in this project?</div>
+        <div class="quiz-options">
+          <button class="quiz-option" type="button">Under pkg/ for package privacy</button>
+          <button class="quiz-option" type="button">Under internal/ for import privacy</button>
+          <button class="quiz-option" type="button">Under src/ like Java projects</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+
+      <div class="quiz" data-correct="0"
+           data-feedback-ok="Correct — Go returns errors; callers decide whether to log, wrap, or respond."
+           data-feedback-err="Go has no throw/catch — return errors and handle them at the boundary.">
+        <div class="quiz-question">How should a handler signal a database failure?</div>
+        <div class="quiz-options">
+          <button class="quiz-option" type="button">Return an error to the caller</button>
+          <button class="quiz-option" type="button">Throw a caught exception</button>
+          <button class="quiz-option" type="button">Emit a warning and continue</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+
+      <h2 id="tasks">Your turn</h2>
+      <p>The starter code is already in this repo. Verify it runs:</p>
+      <pre><code>go run ./cmd/gips
+# in another terminal:
+curl -s localhost:8080/healthz</code></pre>
+      <p>Expected: <code>{"status":"ok"}</code></p>
+
+      <ul class="task-checklist">
+        <li><label><input type="checkbox"> <code>go run ./cmd/gips</code> starts without errors</label></li>
+        <li><label><input type="checkbox"> <code>curl localhost:8080/healthz</code> returns JSON status ok</label></li>
+        <li><label><input type="checkbox"> Read <code>internal/httpserver/server.go</code> — trace how mux → handler</label></li>
+        <li><label><input type="checkbox"> Run <code>go fmt ./...</code> and <code>go vet ./...</code></label></li>
+      </ul>
+
+      <p><strong>Stretch:</strong> Add <code>GET /version</code> returning <code>{"version":"0.1.0"}</code> in a new handler file. Register it in <code>httpserver/server.go</code>. This mirrors how you'll add <code>/register</code> and <code>/images</code> later.</p>
+
+      <div class="primary-source">
+        <strong>Primary source:</strong> Read <a href="https://go.dev/doc/effective_go#names">Effective Go — Names</a> and <a href="https://go.dev/doc/code">How to Write Go Code</a> (module layout section).
+      </div>
+
+      <div class="ask-teacher">
+        <strong>Ask your teacher.</strong> Stuck on package boundaries, ServeMux patterns, or project layout? Ask in chat — e.g. "why not use Gin?" or "walk me through server.go line by line."
+      </div>
+    </main>
+  </div>
+  <script src="../assets/quiz.js"></script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kubernetes — GIPS Go Learning</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="layout">
+    <nav class="lesson-nav">
+      <strong>Reference</strong>
+      <ul>
+        <li><a href="curriculum-roadmap.html">Curriculum</a></li>
+        <li><a href="docker-and-cicd.html">Docker &amp; CI/CD</a></li>
+        <li><a href="kubernetes.html">Kubernetes</a></li>
+        <li><a href="database-and-cache.html">Database &amp; cache</a></li>
+      </ul>
+    </nav>
+    <main>
+      <h1>Kubernetes deployment</h1>
+      <p class="lesson-meta">Lesson 16 · after the service is feature-complete</p>
+
+      <h2>Why lesson 16?</h2>
+      <p>K8s needs something worth deploying. By lesson 16 you have: container in GHCR, Redis cache/queue, R2 storage, async workers. Manifests map to real env vars and volumes — not a toy <code>hello-world</code>.</p>
+      <p>Yes, K8s is heavy for a solo image API — but your goal is to <em>learn</em> it on a project you understand end-to-end.</p>
+
+      <h2>Local cluster: kind</h2>
+      <p>Use <a href="https://kind.sigs.k8s.io/">kind</a> (Kubernetes in Docker) — you already have Docker from lesson 3.</p>
+      <pre><code>kind create cluster --name gips
+kubectl cluster-info --context kind-gips</code></pre>
+
+      <h2>Manifest layout</h2>
+      <pre><code>deploy/k8s/
+├── namespace.yaml
+├── configmap.yaml       # PORT, REDIS_ADDR, IMAGE_STORAGE_PATH, …
+├── secret.yaml          # JWT_SECRET, R2 keys (gitignored template + example)
+├── redis-deployment.yaml
+├── redis-service.yaml
+├── gips-pvc.yaml        # SQLite + local cache path (single replica)
+├── gips-deployment.yaml # replicas: 1 while using SQLite
+├── gips-service.yaml
+└── ingress.yaml         # stretch: path routing to gips</code></pre>
+
+      <h2>Lesson 16 delivers</h2>
+      <table>
+        <thead>
+          <tr><th>Resource</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>Namespace</code></td><td>Isolate <code>gips</code> stack</td></tr>
+          <tr><td><code>Deployment</code> (gips)</td><td>Run container from <code>ghcr.io/…/gips:latest</code></td></tr>
+          <tr><td><code>Deployment</code> (redis)</td><td>In-cluster Redis for cache + streams</td></tr>
+          <tr><td><code>Service</code></td><td>ClusterIP for redis; LoadBalancer or port-forward for gips</td></tr>
+          <tr><td><code>ConfigMap</code></td><td>Non-secret env</td></tr>
+          <tr><td><code>Secret</code></td><td>JWT secret, R2 credentials</td></tr>
+          <tr><td><code>PVC</code></td><td>Persist SQLite file + temp uploads (single replica)</td></tr>
+          <tr><td><code>Ingress</code></td><td>Stretch — expose HTTP with a local ingress controller</td></tr>
+        </tbody>
+      </table>
+
+      <h2>SQLite on K8s — be honest</h2>
+      <div class="mission-callout">
+        <strong>Constraint:</strong> SQLite = one writable replica. Run <code>replicas: 1</code> for gips until you swap to Postgres. This is a learning deployment, not multi-region HA. The lesson teaches K8s mechanics; the data layer limitation is called out explicitly.
+      </div>
+
+      <h2>Deploy flow</h2>
+      <pre><code># image already in GHCR from lesson 4 CI
+kubectl apply -f deploy/k8s/namespace.yaml
+kubectl apply -f deploy/k8s/
+
+kubectl port-forward svc/gips 8080:8080 -n gips
+curl localhost:8080/healthz</code></pre>
+
+      <h2>Stretch goals</h2>
+      <ul>
+        <li><strong>Helm chart</strong> — lesson 17; templatize lesson 16 manifests</li>
+        <li><strong>HPA</strong> — CPU-based autoscale (after SQLite → Postgres, if ever)</li>
+        <li><strong>Liveness/readiness</strong> — probes hitting <code>/healthz</code></li>
+        <li><strong>GitHub Actions deploy job</strong> — optional in lesson 18 with VPS</li>
+      </ul>
+
+      <h2>Next steps</h2>
+      <ul>
+        <li><a href="helm.html">Lesson 17 — Helm chart</a></li>
+        <li><a href="vps-deploy.html">Lesson 18 — VPS + k3s</a> (when you have a box ready)</li>
+      </ul>
+
+      <h2>What we skip (for now)</h2>
+      <ul>
+        <li>Multi-cluster, service mesh, GitOps (ArgoCD/Flux)</li>
+        <li>Managed K8s provisioning (EKS/GKE) — use kind locally; cloud cluster is your homework</li>
+      </ul>
+
+      <div class="primary-source">
+        <strong>Primary sources:</strong>
+        <a href="https://kubernetes.io/docs/tutorials/kubernetes-basics/">Kubernetes Basics</a> ·
+        <a href="https://kind.sigs.k8s.io/docs/user/quick-start/">kind quick start</a> ·
+        <a href="https://kubernetes.io/docs/concepts/configuration/overview/">Configuration good practices</a>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

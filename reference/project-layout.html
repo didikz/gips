@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Project layout — GIPS Go Learning</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="layout">
+    <nav class="lesson-nav">
+      <strong>Reference</strong>
+      <ul>
+        <li><a href="curriculum-roadmap.html">Curriculum</a></li>
+        <li><a href="project-layout.html">Project layout</a></li>
+        <li><a href="database-and-cache.html">Database &amp; cache</a></li>
+        <li><a href="glossary.html">Glossary</a></li>
+      </ul>
+    </nav>
+    <main>
+      <h1>Project layout</h1>
+      <p class="lesson-meta">Stdlib service · <code>github.com/didikz/gips</code></p>
+
+      <pre><code>gips/
+├── cmd/gips/main.go          # minimal main: parse flags, start server
+├── internal/                 # private application code (not importable)
+│   ├── config/config.go      # env-based configuration
+│   ├── db/db.go              # Open SQLite, run migrations
+│   ├── store/                # flat SQL functions (user.go, image.go)
+│   ├── cache/                # Redis helpers (lesson 10+)
+│   ├── httpserver/server.go  # routes, passes *sql.DB to handlers
+│   └── http/handler/         # HTTP handlers call store directly
+├── data/                     # gitignored: gips.db, uploaded images
+│   ├── gips.db               # SQLite (created lesson 4)
+│   └── images/               # original + derived blobs
+├── go.mod
+├── deploy/
+│   ├── k8s/                  # plain manifests (lesson 16)
+│   └── helm/gips/            # Helm chart (lesson 17)
+└── lessons/ …                # teaching materials (not shipped)</code></pre>
+
+      <h2>Rules</h2>
+      <ul>
+        <li><strong><code>cmd/</code></strong> — one directory per binary; keep <code>main</code> thin.</li>
+        <li><strong><code>internal/</code></strong> — enforced privacy; only this module can import it (<a href="https://go.dev/doc/go1.4#internalpackages">Go 1.4+</a>).</li>
+        <li><strong>Package name = directory name</strong> — short, lowercase, no underscores (<a href="https://go.dev/doc/effective_go#names">Effective Go</a>).</li>
+        <li><strong>No <code>utils</code> package</strong> — name by responsibility (<code>handler</code>, <code>store</code>, <code>config</code>).</li>
+        <li><strong>Stay flat</strong> — handlers → store functions → SQL. No ORM, no repository interfaces unless a second impl appears.</li>
+        <li><strong>Deploy path</strong> — Docker → GHCR → <code>deploy/k8s/</code> (lesson 16).</li>
+      </ul>
+    </main>
+  </div>
+</body>
+</html>

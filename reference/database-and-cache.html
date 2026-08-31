@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Database &amp; cache — GIPS Go Learning</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="layout">
+    <nav class="lesson-nav">
+      <strong>Reference</strong>
+      <ul>
+        <li><a href="curriculum-roadmap.html">Curriculum</a></li>
+        <li><a href="project-layout.html">Project layout</a></li>
+        <li><a href="database-and-cache.html">Database &amp; cache</a></li>
+        <li><a href="glossary.html">Glossary</a></li>
+      </ul>
+    </nav>
+    <main>
+      <h1>Database &amp; cache stack</h1>
+      <p class="lesson-meta">SQLite · Redis · local disk for blobs</p>
+
+      <h2>Three storage layers</h2>
+      <table>
+        <thead>
+          <tr><th>Layer</th><th>Technology</th><th>Stores</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Relational</td>
+            <td>SQLite (<code>database/sql</code> + <code>modernc.org/sqlite</code>)</td>
+            <td>Users, sessions/tokens metadata, image records, transform history</td>
+          </tr>
+          <tr>
+            <td>Blob files</td>
+            <td>Local filesystem (<code>data/images/</code>)</td>
+            <td>Original and derived image bytes (until optional S3/R2 lesson)</td>
+          </tr>
+          <tr>
+            <td>Cache</td>
+            <td>Redis (<code>redis/go-redis/v9</code>)</td>
+            <td>Hot transformed images (keyed by image ID + transform hash), optional rate-limit counters</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Why SQLite?</h2>
+      <ul>
+        <li>Zero ops for learning — one file, no server process.</li>
+        <li>Plain <code>database/sql</code>: open DB in <code>main</code>, pass <code>*sql.DB</code> to handlers and store functions.</li>
+        <li>SQL lives in <code>internal/store/</code> as simple functions — no ORM, no repository layer.</li>
+      </ul>
+
+      <h2>Why Redis (and when)?</h2>
+      <p>Redis arrives in <strong>lesson 10</strong>, after transforms work without cache. You'll implement <strong>cache-aside</strong>:</p>
+      <ol>
+        <li>Check Redis for <code>transform:{imageID}:{hash}</code></li>
+        <li>On miss — run transform, store bytes in Redis with TTL, return response</li>
+        <li>On hit — serve from Redis, skip CPU-heavy work</li>
+      </ol>
+      <p>This matches the <a href="https://roadmap.sh/projects/image-processing-service">roadmap.sh tip</a> on caching transformed images.</p>
+
+      <h2>Flat data access</h2>
+      <pre><code>// internal/store/user.go
+func CreateUser(ctx context.Context, db *sql.DB, username, hash string) (User, error)
+func UserByUsername(ctx context.Context, db *sql.DB, username string) (User, error)
+
+// handler calls store directly
+user, err := store.CreateUser(r.Context(), h.db, username, hash)</code></pre>
+      <p>Extract a function when you repeat SQL. Introduce an interface only when a second implementation exists (e.g. tests with fakes) — not upfront.</p>
+
+      <h2>Environment variables</h2>
+      <pre><code>DATABASE_PATH=./data/gips.db    # SQLite file
+REDIS_ADDR=localhost:6379       # Redis (lesson 10+)
+REDIS_PASSWORD=                 # optional
+IMAGE_STORAGE_PATH=./data/images</code></pre>
+
+      <h2>Local dev</h2>
+      <pre><code># SQLite — created automatically on first run (lesson 4)
+mkdir -p data/images
+
+# Redis — needed from lesson 10
+docker run -d --name gips-redis -p 6379:6379 redis:7-alpine</code></pre>
+    </main>
+  </div>
+</body>
+</html>

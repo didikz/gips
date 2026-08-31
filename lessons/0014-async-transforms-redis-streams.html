@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 14 — Async transforms (Redis Streams)</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="layout">
+    <nav class="lesson-nav">
+      <strong>Lesson 14</strong>
+      <ul>
+        <li><a href="../lessons/0013-production-hardening.html">← Lesson 13</a></li>
+        <li><a href="../lessons/0015-cloudflare-r2-storage.html">Lesson 15 →</a></li>
+        <li><a href="../reference/database-and-cache.html">Database reference</a></li>
+        <li><a href="../reference/curriculum-roadmap.html">Curriculum</a></li>
+      </ul>
+    </nav>
+    <main>
+      <h1>Async transforms (Redis Streams)</h1>
+      <p class="lesson-meta">Outline · unlocks after lesson 13</p>
+      <div class="mission-callout"><strong>Status:</strong> Outlined — <code>XADD</code> + worker <code>XREADGROUP</code>.</div>
+      <h2>Delivers</h2>
+      <ul>
+        <li><code>POST /transform</code> → 202 + job ID</li>
+        <li>Worker goroutine consumes stream</li>
+        <li>Job status in SQLite</li>
+      </ul>
+    </main>
+  </div>
+</body>
+</html>

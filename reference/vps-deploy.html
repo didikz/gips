@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VPS deploy — GIPS Go Learning</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="layout">
+    <nav class="lesson-nav">
+      <strong>Reference</strong>
+      <ul>
+        <li><a href="curriculum-roadmap.html">Curriculum</a></li>
+        <li><a href="kubernetes.html">Kubernetes</a></li>
+        <li><a href="helm.html">Helm</a></li>
+        <li><a href="vps-deploy.html">VPS deploy</a></li>
+      </ul>
+    </nav>
+    <main>
+      <h1>VPS deployment (when ready)</h1>
+      <p class="lesson-meta">Lesson 18 · optional capstone · no cloud account needed to start lessons 1–17</p>
+
+      <div class="mission-callout">
+        <strong>Plan:</strong> Learn on <strong>kind</strong> (lessons 16–17) on your laptop. Provision an empty VPS later — same Helm chart, different values. No blocker to starting now.
+      </div>
+
+      <h2>Recommended VPS stack</h2>
+      <table>
+        <thead>
+          <tr><th>Choice</th><th>Why</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>k3s</strong> (single-node K8s)</td>
+            <td>One install command, low RAM (~512MB+ workable), good for learning real K8s without managed EKS/GKE</td>
+          </tr>
+          <tr>
+            <td>2 GB+ RAM VPS</td>
+            <td>gips + Redis + k3s system pods; 1 GB is tight</td>
+          </tr>
+          <tr>
+            <td>Ubuntu 22.04/24.04 LTS</td>
+            <td>Well-documented k3s path</td>
+          </tr>
+          <tr>
+            <td>R2 for images</td>
+            <td>Blob storage off the VPS disk — already in lesson 15</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>What NOT to do on a small VPS</h2>
+      <ul>
+        <li><strong>Full kubeadm multi-node</strong> — overkill for one service on one box</li>
+        <li><strong>SQLite with replicas &gt; 1</strong> — still one gips pod until Postgres</li>
+        <li><strong>Store all images on VPS disk</strong> — use R2; VPS holds metadata + Redis only</li>
+      </ul>
+
+      <h2>Lesson 18 flow (when VPS exists)</h2>
+      <pre><code># on VPS (as root)
+curl -sfL https://get.k3s.io | sh -
+
+# on laptop — copy kubeconfig from VPS
+# install helm chart with values-vps.yaml
+helm install gips ./deploy/helm/gips \
+  -f deploy/helm/gips/values-vps.yaml \
+  --set secret.jwtSecret=... \
+  --set secret.r2AccessKey=...</code></pre>
+
+      <h2>Minimal VPS prep checklist (do anytime)</h2>
+      <ul class="task-checklist">
+        <li><label><input type="checkbox"> VPS with 2 GB+ RAM, public IP</label></li>
+        <li><label><input type="checkbox"> SSH key access, firewall: 22, 80, 443 only</label></li>
+        <li><label><input type="checkbox"> Domain pointing to VPS (optional, for Ingress TLS)</label></li>
+        <li><label><input type="checkbox"> Cloudflare R2 bucket + API token (lesson 15)</label></li>
+        <li><label><input type="checkbox"> GHCR image pull — use imagePullSecret or public repo</label></li>
+      </ul>
+
+      <h2>CI → VPS (stretch)</h2>
+      <p>GitHub Actions SSH deploy or <code>helm upgrade</code> via kubeconfig secret — only after manual deploy works once.</p>
+
+      <div class="primary-source">
+        <strong>Primary source:</strong>
+        <a href="https://docs.k3s.io/quick-start">k3s quick start</a>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

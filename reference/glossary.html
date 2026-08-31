@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Glossary — GIPS Go Learning</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="layout">
+    <nav class="lesson-nav">
+      <strong>Reference</strong>
+      <ul>
+        <li><a href="curriculum-roadmap.html">Curriculum</a></li>
+        <li><a href="project-layout.html">Project layout</a></li>
+        <li><a href="glossary.html">Glossary</a></li>
+      </ul>
+    </nav>
+    <main>
+      <h1>Glossary</h1>
+      <p class="lesson-meta">Canonical terms for this workspace. Grows as you learn.</p>
+
+      <h2>Data access</h2>
+      <p><strong>Store</strong> — Package of plain functions that run SQL against <code>*sql.DB</code>. Handlers call store directly.</p>
+      <p><strong>Cache-aside</strong> — Read cache first; on miss load from source, populate cache, return. Used for transformed images in Redis.</p>
+
+      <h2>Project</h2>
+      <p><strong>GIPS</strong> — Go Image Processing Service; the production target modeled on roadmap.sh.</p>
+      <p><strong>Handler</strong> — A function satisfying <code>http.Handler</code> or <code>http.HandlerFunc</code>; the unit of HTTP request handling.</p>
+      <p><strong>Internal package</strong> — Code under <code>internal/</code> that cannot be imported by other modules.</p>
+
+      <h2>Go idioms</h2>
+      <p><strong>Effective Go</strong> — The style guide we follow for naming, formatting, and program structure.</p>
+      <p><strong>Accept interfaces, return structs</strong> — Depend on small interfaces at call sites; constructors return concrete types.</p>
+      <p><strong>Explicit error</strong> — Errors are values returned alongside results, not thrown exceptions.</p>
+
+      <p style="color: var(--muted); font-size: 0.9rem; margin-top: 2rem;">Terms are added only after you demonstrate understanding in a lesson or exercise.</p>
+    </main>
+  </div>
+</body>
+</html>

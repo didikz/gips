@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Docker &amp; CI/CD — GIPS Go Learning</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="layout">
+    <nav class="lesson-nav">
+      <strong>Reference</strong>
+      <ul>
+        <li><a href="curriculum-roadmap.html">Curriculum</a></li>
+        <li><a href="docker-and-cicd.html">Docker &amp; CI/CD</a></li>
+        <li><a href="database-and-cache.html">Database &amp; cache</a></li>
+        <li><a href="project-layout.html">Project layout</a></li>
+      </ul>
+    </nav>
+    <main>
+      <h1>Docker &amp; CI/CD</h1>
+      <p class="lesson-meta">Lessons 3–4 · production deploy path</p>
+
+      <h2>Why early?</h2>
+      <p>Container + pipeline land right after graceful shutdown — before features pile up. Every later lesson stays deployable: <code>docker compose up</code> and green CI on every push.</p>
+
+      <h2 id="lesson-3">Lesson 3 — Containerization</h2>
+      <p><strong>Delivers:</strong> multi-stage <code>Dockerfile</code>, <code>.dockerignore</code>, <code>docker-compose.yml</code> (app + Redis).</p>
+
+      <h3>Multi-stage Dockerfile (target shape)</h3>
+      <pre><code># build stage
+FROM golang:1.27-alpine AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /gips ./cmd/gips
+
+# runtime stage
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=build /gips /gips
+EXPOSE 8080
+USER nonroot:nonroot
+ENTRYPOINT ["/gips"]</code></pre>
+
+      <ul>
+        <li><strong>CGO_ENABLED=0</strong> — static binary, works in distroless/scratch.</li>
+        <li><strong>distroless + nonroot</strong> — minimal attack surface.</li>
+        <li><strong>HEALTHCHECK</strong> — curl/wget against <code>/healthz</code> (add in lesson).</li>
+        <li><strong>Volumes</strong> — mount <code>./data</code> for SQLite + local images in dev.</li>
+      </ul>
+
+      <h3>docker-compose.yml (local dev)</h3>
+      <pre><code>services:
+  gips:
+    build: .
+    ports: ["8080:8080"]
+    environment:
+      PORT: "8080"
+      DATABASE_PATH: /data/gips.db
+      REDIS_ADDR: redis:6379
+    volumes: ["./data:/data"]
+    depends_on: [redis]
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]</code></pre>
+
+      <h2 id="lesson-4">Lesson 4 — GitHub Actions CI/CD</h2>
+      <p><strong>Delivers:</strong> <code>.github/workflows/ci.yml</code> — lint, test, build image, push to GHCR on <code>main</code>.</p>
+
+      <h3>Pipeline stages</h3>
+      <table>
+        <thead>
+          <tr><th>Trigger</th><th>Job</th><th>Steps</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>PR + push</td>
+            <td><code>test</code></td>
+            <td><code>go fmt</code> check · <code>go vet</code> · <code>go test ./...</code></td>
+          </tr>
+          <tr>
+            <td>push <code>main</code></td>
+            <td><code>docker</code></td>
+            <td>Build image · push to <code>ghcr.io/&lt;owner&gt;/gips</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Workflow sketch</h3>
+      <pre><code>name: CI
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: "1.27" }
+      - run: go fmt ./...
+      - run: go vet ./...
+      - run: go test ./...
+
+  docker:
+    if: github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ghcr.io/${{ github.repository }}:latest</code></pre>
+
+      <h2>Repo files (added across lessons 3–4)</h2>
+      <pre><code>Dockerfile
+.dockerignore
+docker-compose.yml
+.github/workflows/ci.yml</code></pre>
+
+      <h2>Out of scope (for now)</h2>
+      <ul>
+        <li>Service mesh, GitOps, multi-cluster</li>
+        <li>Cloud-managed K8s provisioning (EKS/GKE) — see <a href="kubernetes.html">lesson 16</a> for kind locally first</li>
+      </ul>
+
+      <div class="primary-source">
+        <strong>Primary sources:</strong>
+        <a href="https://docs.docker.com/build/building/multi-stage/">Docker multi-stage builds</a> ·
+        <a href="https://docs.github.com/en/actions">GitHub Actions docs</a> ·
+        <a href="https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry">GHCR</a>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

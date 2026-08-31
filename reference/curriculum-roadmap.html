@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Curriculum — GIPS Go Learning</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="layout">
+    <nav class="lesson-nav">
+      <strong>Reference</strong>
+      <ul>
+        <li><a href="curriculum-roadmap.html">Curriculum</a></li>
+        <li><a href="project-layout.html">Project layout</a></li>
+        <li><a href="database-and-cache.html">Database &amp; cache</a></li>
+        <li><a href="docker-and-cicd.html">Docker &amp; CI/CD</a></li>
+        <li><a href="kubernetes.html">Kubernetes</a></li>
+        <li><a href="helm.html">Helm</a></li>
+        <li><a href="vps-deploy.html">VPS deploy</a></li>
+        <li><a href="../lessons/0001-project-skeleton-and-http-server.html">Lesson 1 →</a></li>
+      </ul>
+    </nav>
+    <main>
+      <h1>Structured curriculum</h1>
+      <p class="lesson-meta">Image Processing Service · stdlib-first · production-grade</p>
+
+      <p>Each lesson ships one slice of the <a href="https://roadmap.sh/projects/image-processing-service">roadmap.sh project</a>. Deploy: <a href="docker-and-cicd.html">Docker → GHCR</a> → <a href="kubernetes.html">kind</a> → <a href="helm.html">Helm</a> → <a href="vps-deploy.html">VPS/k3s</a> when ready. Data: <a href="database-and-cache.html">SQLite + Redis + R2</a>.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Lesson</th>
+              <th>Delivers</th>
+              <th>Deps</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td><a href="../lessons/0001-project-skeleton-and-http-server.html">Project skeleton &amp; HTTP</a></td>
+              <td><code>GET /healthz</code>, package layout, <code>go run</code></td>
+              <td>stdlib</td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td><a href="../lessons/0002-config-and-graceful-shutdown.html">Config &amp; graceful shutdown</a></td>
+              <td><code>slog</code>, env config, signal handling, <code>context</code></td>
+              <td>stdlib</td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td><a href="../lessons/0003-docker-containerization.html">Docker containerization</a></td>
+              <td>Multi-stage <code>Dockerfile</code>, <code>docker compose</code> (app + Redis)</td>
+              <td>Docker</td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td><a href="../lessons/0004-github-actions-cicd.html">GitHub Actions CI/CD</a></td>
+              <td><code>go test</code> on PR; build + push image to GHCR on <code>main</code></td>
+              <td>GitHub Actions</td>
+            </tr>
+            <tr>
+              <td>5</td>
+              <td><a href="../lessons/0005-middleware-and-routing.html">Middleware &amp; routing</a></td>
+              <td>Request ID, logging middleware, <code>ServeMux</code> patterns</td>
+              <td>stdlib</td>
+            </tr>
+            <tr>
+              <td>6</td>
+              <td><a href="../lessons/0006-sqlite-persistence.html">SQLite persistence</a></td>
+              <td><code>database/sql</code>, migrations, <code>internal/store/</code> functions</td>
+              <td>+ <code>modernc.org/sqlite</code></td>
+            </tr>
+            <tr>
+              <td>7</td>
+              <td><a href="../lessons/0007-registration-and-login.html">Registration &amp; login</a></td>
+              <td><code>POST /register</code>, <code>POST /login</code>, password hashing</td>
+              <td>+ <code>x/crypto/bcrypt</code></td>
+            </tr>
+            <tr>
+              <td>8</td>
+              <td><a href="../lessons/0008-jwt-auth-middleware.html">JWT auth middleware</a></td>
+              <td>Protect image routes</td>
+              <td>+ JWT library</td>
+            </tr>
+            <tr>
+              <td>9</td>
+              <td><a href="../lessons/0009-image-upload.html">Image upload</a></td>
+              <td><code>POST /images</code>, multipart, metadata → SQLite, bytes → disk</td>
+              <td>stdlib</td>
+            </tr>
+            <tr>
+              <td>10</td>
+              <td><a href="../lessons/0010-transform-pipeline.html">Transform pipeline</a></td>
+              <td>Resize, crop, rotate, format conversion</td>
+              <td>stdlib (+ maybe <code>x/image</code>)</td>
+            </tr>
+            <tr>
+              <td>11</td>
+              <td><a href="../lessons/0011-retrieve-and-list.html">Retrieve &amp; list</a></td>
+              <td><code>GET /images/:id</code>, paginated list</td>
+              <td>stdlib</td>
+            </tr>
+            <tr>
+              <td>12</td>
+              <td><a href="../lessons/0012-redis-transform-cache.html">Redis transform cache</a></td>
+              <td>Cache-aside for transformed images, TTL, invalidation</td>
+              <td>+ <code>redis/go-redis/v9</code></td>
+            </tr>
+            <tr>
+              <td>13</td>
+              <td><a href="../lessons/0013-production-hardening.html">Production hardening</a></td>
+              <td>Rate limits (Redis), load test, error taxonomy</td>
+              <td>mixed</td>
+            </tr>
+            <tr>
+              <td>14</td>
+              <td><a href="../lessons/0014-async-transforms-redis-streams.html">Async transforms (Redis Streams)</a></td>
+              <td><code>XADD</code> jobs; worker <code>XREADGROUP</code></td>
+              <td>Redis</td>
+            </tr>
+            <tr>
+              <td>15</td>
+              <td><a href="../lessons/0015-cloudflare-r2-storage.html">Cloudflare R2 storage</a></td>
+              <td>Swap local disk for R2; S3-compatible API</td>
+              <td>+ AWS SDK v2</td>
+            </tr>
+            <tr>
+              <td>16</td>
+              <td><a href="../lessons/0016-kubernetes-deployment.html">Kubernetes deployment</a></td>
+              <td>kind cluster, Deployment/Service/ConfigMap/Secret/PVC, probes</td>
+              <td>kind + kubectl</td>
+            </tr>
+            <tr>
+              <td>17</td>
+              <td><a href="../lessons/0017-helm-chart.html">Helm chart</a></td>
+              <td>Templatize manifests; <code>values.yaml</code> + <code>helm install/upgrade/rollback</code></td>
+              <td>Helm 3</td>
+            </tr>
+            <tr>
+              <td>18</td>
+              <td><a href="../lessons/0018-vps-deploy-k3s.html">VPS deploy (k3s)</a></td>
+              <td>Single-node k3s on your VPS; same chart, <code>values-vps.yaml</code></td>
+              <td>VPS when ready</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Principles</h2>
+      <ul>
+        <li><a href="https://go.dev/doc/effective_go">Effective Go</a> governs naming, errors, and package design.</li>
+        <li>Every lesson ends with a running, testable, containerizable increment.</li>
+        <li>CI stays green from lesson 4 onward — tests added alongside features.</li>
+        <li>Deploy path: Docker → GHCR → K8s manifests → Helm chart → VPS (optional).</li>
+      </ul>
+    </main>
+  </div>
+</body>
+</html>

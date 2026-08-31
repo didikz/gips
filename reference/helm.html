@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Helm — GIPS Go Learning</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="layout">
+    <nav class="lesson-nav">
+      <strong>Reference</strong>
+      <ul>
+        <li><a href="curriculum-roadmap.html">Curriculum</a></li>
+        <li><a href="kubernetes.html">Kubernetes</a></li>
+        <li><a href="helm.html">Helm</a></li>
+        <li><a href="vps-deploy.html">VPS deploy</a></li>
+      </ul>
+    </nav>
+    <main>
+      <h1>Helm chart</h1>
+      <p class="lesson-meta">Lesson 17 · after plain K8s manifests (lesson 16)</p>
+
+      <h2>Why after lesson 16?</h2>
+      <p>Helm templates the YAML you already understand. Lesson 16 teaches <code>Deployment</code>, <code>Service</code>, etc. Lesson 17 wraps them in a chart so dev (kind) and prod (VPS) differ only by values file.</p>
+
+      <h2>Chart layout</h2>
+      <pre><code>deploy/helm/gips/
+├── Chart.yaml
+├── values.yaml              # defaults (kind / local)
+├── values-vps.yaml          # your VPS overrides (lesson 18)
+└── templates/
+    ├── deployment.yaml
+    ├── service.yaml
+    ├── configmap.yaml
+    ├── secret.yaml
+    ├── redis-deployment.yaml
+    ├── redis-service.yaml
+    ├── pvc.yaml
+    └── _helpers.tpl</code></pre>
+
+      <h2>Lesson 17 delivers</h2>
+      <ul>
+        <li>Convert <code>deploy/k8s/</code> manifests → Helm templates</li>
+        <li><code>values.yaml</code> — image repo/tag, replicaCount, resource limits, env</li>
+        <li><code>helm install gips ./deploy/helm/gips</code> on kind</li>
+        <li><code>helm upgrade</code> after CI pushes new image tag</li>
+        <li><code>helm rollback</code> when a deploy breaks</li>
+      </ul>
+
+      <h2>Values example</h2>
+      <pre><code># values.yaml (kind / local)
+image:
+  repository: ghcr.io/didikz/gips
+  tag: latest
+replicaCount: 1
+
+redis:
+  enabled: true
+
+persistence:
+  enabled: true
+  size: 1Gi
+
+ingress:
+  enabled: false</code></pre>
+
+      <pre><code># values-vps.yaml (when VPS is ready)
+ingress:
+  enabled: true
+  host: gips.example.com
+
+image:
+  tag: "sha-abc123"   # pin from CI, not :latest</code></pre>
+
+      <h2>Commands</h2>
+      <pre><code>helm lint ./deploy/helm/gips
+helm install gips ./deploy/helm/gips -n gips --create-namespace
+helm upgrade gips ./deploy/helm/gips -f values-vps.yaml
+helm history gips -n gips
+helm rollback gips 1 -n gips</code></pre>
+
+      <div class="primary-source">
+        <strong>Primary source:</strong>
+        <a href="https://helm.sh/docs/chart_template_guide/getting_started/">Helm chart template guide</a>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

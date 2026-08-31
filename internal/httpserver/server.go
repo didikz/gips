@@ -19,6 +19,7 @@ type Server struct {
 func New(cfg config.Config) *Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", handler.Health)
+	mux.HandleFunc("GET /version", handler.Version)
 
 	return &Server{
 		cfg: cfg,

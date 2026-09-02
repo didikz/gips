@@ -2,13 +2,15 @@
 package config
 
 import (
+	"log/slog"
 	"os"
 	"strconv"
 )
 
 // Config holds runtime settings for the image processing service.
 type Config struct {
-	Addr string // listen address, e.g. ":8080"
+	Addr     string // listen address, e.g. ":8080"
+	LogLevel slog.Level
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -20,5 +22,8 @@ func Load() Config {
 	if _, err := strconv.Atoi(port); err != nil {
 		port = "8080"
 	}
-	return Config{Addr: ":" + port}
+	return Config{
+		Addr:     ":" + port,
+		LogLevel: slog.LevelInfo,
+	}
 }

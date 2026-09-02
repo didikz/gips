@@ -44,5 +44,6 @@
 
 - Do **not** use Laravel/ORM/repository as comparison points in lessons
 - Explain Go on its own terms: explicit, flat, stdlib-first
+- **Do not edit learner's code** — propose fixes and explain; let them implement (explicit preference, Sep 2025)
 
 

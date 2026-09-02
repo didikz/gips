@@ -11,6 +11,10 @@
     <nav class="lesson-nav">
       <strong>Lesson 2</strong>
       <ul>
+        <li><a href="#slog">Structured logging</a></li>
+        <li><a href="#shutdown">Graceful shutdown</a></li>
+        <li><a href="#quiz">Check yourself</a></li>
+        <li><a href="#tasks">Your turn</a></li>
         <li><a href="../lessons/0001-project-skeleton-and-http-server.html">← Lesson 1</a></li>
         <li><a href="../lessons/0003-docker-containerization.html">Lesson 3 →</a></li>
         <li><a href="../reference/curriculum-roadmap.html">Curriculum</a></li>
@@ -18,18 +22,98 @@
     </nav>
     <main>
       <h1>Config &amp; graceful shutdown</h1>
-      <p class="lesson-meta">Outline · unlocks after lesson 1</p>
-      <div class="mission-callout"><strong>Status:</strong> Outlined — full lesson published when you complete lesson 1.</div>
-      <h2>Delivers</h2>
+      <p class="lesson-meta">~30 min · stdlib only · required before Docker</p>
+
+      <div class="mission-callout">
+        <strong>Why now:</strong> Lesson 3 puts this in a container. Containers send <code>SIGTERM</code> on stop — your server must drain in-flight requests, not drop them. Structured logs make production debugging possible.
+      </div>
+
+      <h2 id="slog">Replace <code>fmt.Printf</code> with <code>slog</code></h2>
+      <p>Go 1.21+ ships <code>log/slog</code> — structured, leveled logging in the stdlib. JSON logs parse well in Docker and K8s.</p>
+      <pre><code>log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+    Level: cfg.LogLevel,
+}))
+slog.SetDefault(log)
+
+log.Info("server listening", "addr", cfg.Addr)</code></pre>
+      <p>Add <code>LogLevel</code> to <code>config.Config</code>, parsed from <code>LOG_LEVEL</code> env (<code>debug</code>, <code>info</code>, <code>warn</code>, <code>error</code>). Default: <code>info</code>.</p>
+
+      <h2 id="shutdown">Graceful shutdown pattern</h2>
+      <p>Run the server in a goroutine. Main waits for <code>SIGINT</code> or <code>SIGTERM</code>, then calls <code>server.Shutdown(ctx)</code>.</p>
+      <pre><code>errCh := make(chan error, 1)
+go func() { errCh <- srv.Run() }()
+
+quit := make(chan os.Signal, 1)
+signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+select {
+case sig := <-quit:
+    log.Info("shutdown signal received", "signal", sig.String())
+case err := <-errCh:
+    // handle startup failure
+}
+
+ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+defer cancel()
+srv.Shutdown(ctx)</code></pre>
+
+      <h3>Changes by file</h3>
       <ul>
-        <li><code>slog</code> structured logging</li>
-        <li>Expanded <code>config.Load()</code> from env</li>
-        <li>Signal handling (<code>SIGTERM</code>, <code>SIGINT</code>)</li>
-        <li><code>context</code>-aware <code>server.Shutdown</code></li>
+        <li><strong><code>config/config.go</code></strong> — add <code>LogLevel slog.Level</code></li>
+        <li><strong><code>httpserver/server.go</code></strong> — accept <code>*slog.Logger</code>; rename <code>ListenAndServe</code> → <code>Run</code>; add <code>Shutdown(ctx)</code></li>
+        <li><strong><code>cmd/gips/main.go</code></strong> — setup slog, signal handling, shutdown timeout</li>
       </ul>
-      <h2>Reference</h2>
-      <p><a href="../reference/project-layout.html">Project layout</a></p>
+
+      <h2 id="quiz">Check yourself</h2>
+
+      <div class="quiz" data-correct="1"
+           data-feedback-ok="Correct — Shutdown waits for active connections; Close cuts them."
+           data-feedback-err="Close is immediate; Shutdown drains in-flight requests.">
+        <div class="quiz-question">Which stops the server without dropping requests?</div>
+        <div class="quiz-options">
+          <button class="quiz-option" type="button">server.Close immediately now</button>
+          <button class="quiz-option" type="button">server.Shutdown with context</button>
+          <button class="quiz-option" type="button">os.Exit without any wait</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+
+      <div class="quiz" data-correct="2"
+           data-feedback-ok="Right — SIGTERM is what Docker and K8s send on stop."
+           data-feedback-err="SIGKILL cannot be caught; SIGTERM is the graceful signal.">
+        <div class="quiz-question">Which signal should you trap for container stop?</div>
+        <div class="quiz-options">
+          <button class="quiz-option" type="button">SIGKILL only for every stop</button>
+          <button class="quiz-option" type="button">SIGHUP only for every stop</button>
+          <button class="quiz-option" type="button">SIGTERM plus SIGINT for local</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+
+      <h2 id="tasks">Your turn</h2>
+      <ol>
+        <li>Implement slog + <code>LOG_LEVEL</code> in config</li>
+        <li>Implement graceful shutdown in <code>main.go</code></li>
+        <li>Refactor <code>httpserver</code> with <code>Run</code> + <code>Shutdown</code></li>
+        <li>Verify:
+          <pre><code>go run ./cmd/gips
+# Ctrl+C — expect JSON log lines including "shutdown signal received" and "server stopped"
+curl -s localhost:8080/healthz   # still works before Ctrl+C</code></pre>
+        </li>
+        <li><code>go fmt ./...</code> · <code>go vet ./...</code></li>
+      </ol>
+
+      <p><strong>Stretch:</strong> Add a table-driven test in <code>config/config_test.go</code> for <code>parseLogLevel</code> (export it or test via <code>Load</code> with env).</p>
+
+      <div class="primary-source">
+        <strong>Primary source:</strong> <a href="https://pkg.go.dev/log/slog">log/slog package docs</a> and <a href="https://pkg.go.dev/net/http#Server.Shutdown">http.Server.Shutdown</a>.
+      </div>
+
+      <div class="ask-teacher">
+        <strong>Ask your teacher.</strong> Stuck on the <code>select</code> pattern, context timeout, or passing the logger? Ask in chat.
+      </div>
     </main>
   </div>
+  <script src="../assets/quiz.js"></script>
 </body>
 </html>

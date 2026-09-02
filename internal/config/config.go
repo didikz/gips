@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
+	"strings"
 )
 
 // Config holds runtime settings for the image processing service.
@@ -22,8 +23,22 @@ func Load() Config {
 	if _, err := strconv.Atoi(port); err != nil {
 		port = "8080"
 	}
+
 	return Config{
 		Addr:     ":" + port,
-		LogLevel: slog.LevelInfo,
+		LogLevel: parseLogLevel(os.Getenv("LOG_LEVEL")),
+	}
+}
+
+func parseLogLevel(level string) slog.Level {
+	switch strings.ToLower(strings.TrimSpace(level)) {
+	case "debug":
+		return slog.LevelDebug
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
 	}
 }

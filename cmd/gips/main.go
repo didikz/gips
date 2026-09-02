@@ -46,5 +46,10 @@ func main() {
 		log.Error("graceful shutdown failed", "err", err)
 		os.Exit(1)
 	}
+
+	if err := <-errCh; err != nil {
+		log.Error("server exited with error", "err", err)
+		os.Exit(1)
+	}
 	log.Info("server stopped")
 }

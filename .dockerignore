@@ -1,0 +1,7 @@
+.git
+data/
+lessons/
+reference/
+learning-records/
+*.md
+.DS_Store

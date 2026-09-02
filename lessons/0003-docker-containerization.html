@@ -11,23 +11,120 @@
     <nav class="lesson-nav">
       <strong>Lesson 3</strong>
       <ul>
+        <li><a href="#why">Why Docker now</a></li>
+        <li><a href="#files">Files to create</a></li>
+        <li><a href="#dockerfile">Dockerfile</a></li>
+        <li><a href="#compose">Compose</a></li>
+        <li><a href="#tasks">Your turn</a></li>
         <li><a href="../lessons/0002-config-and-graceful-shutdown.html">← Lesson 2</a></li>
         <li><a href="../lessons/0004-github-actions-cicd.html">Lesson 4 →</a></li>
         <li><a href="../reference/docker-and-cicd.html#lesson-3">Docker reference</a></li>
-        <li><a href="../reference/curriculum-roadmap.html">Curriculum</a></li>
       </ul>
     </nav>
     <main>
       <h1>Docker containerization</h1>
-      <p class="lesson-meta">Outline · unlocks after lesson 2</p>
-      <div class="mission-callout"><strong>Status:</strong> Outlined — see <a href="../reference/docker-and-cicd.html#lesson-3">Docker reference</a> for target shape.</div>
-      <h2>Delivers</h2>
+      <p class="lesson-meta">~45 min · multi-stage build · compose with Redis</p>
+
+      <div class="mission-callout" id="why">
+        <strong>Why now:</strong> Lesson 2 added graceful shutdown for <code>SIGTERM</code> — exactly what <code>docker stop</code> sends. Today you package gips as an image and run it with Redis beside it.
+      </div>
+
+      <h2 id="files">Create these 3 files (you write them)</h2>
       <ul>
-        <li>Multi-stage <code>Dockerfile</code>, <code>.dockerignore</code></li>
-        <li>Distroless non-root runtime</li>
-        <li><code>docker-compose.yml</code> — app + Redis</li>
-        <li><code>HEALTHCHECK</code> on <code>/healthz</code></li>
+        <li><code>Dockerfile</code> — multi-stage build</li>
+        <li><code>.dockerignore</code> — keep image small</li>
+        <li><code>docker-compose.yml</code> — gips + redis</li>
       </ul>
+
+      <h2 id="dockerfile">Multi-stage Dockerfile — concept</h2>
+      <p><strong>Stage 1 (build):</strong> full Go toolchain compiles the binary.<br>
+         <strong>Stage 2 (runtime):</strong> copy only the binary — tiny, no compiler, no shell.</p>
+
+      <p>Proposed shape (adapt to your repo):</p>
+      <pre><code># --- build ---
+FROM golang:1.27-alpine AS build
+WORKDIR /src
+COPY go.mod ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /gips ./cmd/gips
+
+# --- runtime ---
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=build /gips /gips
+EXPOSE 8080
+USER nonroot:nonroot
+ENTRYPOINT ["/gips"]</code></pre>
+
+      <h3>Key flags</h3>
+      <ul>
+        <li><code>CGO_ENABLED=0</code> — pure Go binary, runs in distroless (no libc from CGO)</li>
+        <li><code>-ldflags="-s -w"</code> — strip debug symbols, smaller binary</li>
+        <li><code>nonroot</code> user — don't run as root in the container</li>
+      </ul>
+
+      <h3>No go.sum yet?</h3>
+      <p>Your project is stdlib-only — you may only have <code>go.mod</code>. Copy <code>go.mod</code> only, or run <code>go mod tidy</code> locally first to generate <code>go.sum</code>.</p>
+
+      <h3>HEALTHCHECK + distroless</h3>
+      <p>Distroless has no <code>curl</code> or shell. Options:</p>
+      <ul>
+        <li><strong>Lesson 3 (simple):</strong> put <code>healthcheck</code> in <code>docker-compose.yml</code> using an HTTP check from the host, or skip until K8s probes (lesson 16)</li>
+        <li><strong>Stretch:</strong> swap runtime to <code>distroless/debug-nonroot</code> and use busybox <code>wget</code> in HEALTHCHECK</li>
+      </ul>
+
+      <h2 id="compose">docker-compose.yml</h2>
+      <p>Proposed shape:</p>
+      <pre><code>services:
+  gips:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      LOG_LEVEL: info
+      REDIS_ADDR: redis:6379
+    volumes:
+      - ./data:/data
+    depends_on:
+      - redis
+    stop_grace_period: 15s
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"</code></pre>
+
+      <p><code>stop_grace_period: 15s</code> gives your lesson-2 shutdown time to drain before SIGKILL.</p>
+      <p><code>REDIS_ADDR</code> is for later lessons — gips ignores it for now, but compose won't need changing in lesson 12.</p>
+
+      <h2>.dockerignore</h2>
+      <pre><code>.git
+data/
+lessons/
+reference/
+learning-records/
+*.md
+.DS_Store</code></pre>
+
+      <h2 id="tasks">Your turn — checklist</h2>
+      <ol>
+        <li>Create <code>Dockerfile</code>, <code>.dockerignore</code>, <code>docker-compose.yml</code></li>
+        <li><code>mkdir -p data</code></li>
+        <li><code>docker compose build</code></li>
+        <li><code>docker compose up</code></li>
+        <li><code>curl -s localhost:8080/healthz</code></li>
+        <li><code>docker compose stop</code> — watch JSON shutdown logs</li>
+        <li><code>docker compose down</code></li>
+      </ol>
+
+      <div class="primary-source">
+        <strong>Primary source:</strong> <a href="https://docs.docker.com/build/building/multi-stage/">Docker multi-stage builds</a>
+      </div>
+
+      <div class="ask-teacher">
+        <strong>Ask your teacher.</strong> Build fails? Image too big? Distroless confusing? Paste the error — we'll debug without me editing your files.
+      </div>
     </main>
   </div>
 </body>
